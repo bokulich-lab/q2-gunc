@@ -132,7 +132,7 @@ def _run_gunc(
         base_cmd.append("--use_species_level")
 
     if isinstance(mags, MultiMAGSequencesDirFmt):
-        for sample_id, mag_dict in mags.sample_dict().items():
+        for sample_id, _ in mags.sample_dict().items():
             cmd = deepcopy(base_cmd)
             os.makedirs(results.path / sample_id, exist_ok=True)
             cmd.extend(
