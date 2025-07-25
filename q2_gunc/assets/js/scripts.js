@@ -60,7 +60,12 @@ function createSummaryPlot(filteredData = null, reverseY = true) {
   const sampleCountSpan = document.querySelector('.stat-value.text-info');
   const passCountSpan = document.querySelector('.stat-value.text-accent');
   const failCountSpan = document.querySelector('.stat-value.text-error');
-  const sampleCount = new Set(dataToUse.map(d => d.sample_id)).size;
+  
+  // Determine if this is FeatureData[MAG] (dereplicated MAGs)
+  const isFeatureDataMAG = Object.keys(samples).includes("") && Object.keys(samples).length === 1;
+  
+  // For FeatureData[MAG], show "-" for sample count since samples are not meaningful
+  const sampleCount = isFeatureDataMAG ? "-" : new Set(dataToUse.map(d => d.sample_id)).size;
   const passCount = dataToUse.filter(d => {
     const passValue = d.pass_gunc;
     return passValue === true || passValue === "True" || passValue === "true" || passValue === "Pass" || passValue === "pass";
@@ -236,6 +241,9 @@ document.addEventListener('DOMContentLoaded', function() {
       createSummaryPlot(filteredData, reverseY);
     }
   }
+  // Determine if this is FeatureData[MAG] (dereplicated MAGs) or SampleData[MAGs] (per-sample MAGs)
+  const isFeatureDataMAG = sampleKeys.includes("") && sampleKeys.length === 1;
+  
   // Populate sample dropdown with "All Samples" option first
   const sampleKeys = Object.keys(samples).sort();
   sampleKeys.forEach(sampleId => {
@@ -245,18 +253,53 @@ document.addEventListener('DOMContentLoaded', function() {
     option.textContent = sampleId === "" ? "(Default)" : sampleId;
     sampleSelector.appendChild(option);
   });
-  // Default to showing all samples (empty value = all samples)
-  sampleSelector.value = "";
-  magSelector.disabled = true;
+  
+  // For FeatureData[MAG], disable sample selector and enable MAG selector
+  // For SampleData[MAGs], default to showing all samples
+  if (isFeatureDataMAG) {
+    sampleSelector.value = "";
+    sampleSelector.disabled = true;
+    magSelector.disabled = false;
+    // Populate MAGs immediately for FeatureData[MAG]
+    populateMAGs("");
+  } else {
+    sampleSelector.value = "";
+    sampleSelector.disabled = false;
+    magSelector.disabled = true;
+  }
   // Function to populate MAG dropdown
   function populateMAGs(selectedSample) {
     magSelector.innerHTML = '<option value="">-- Select a MAG --</option>';
     plotCard.style.display = 'none';
-    // Handle "All Samples" selection (empty value)
+    
+    // Determine if this is FeatureData[MAG] (dereplicated MAGs)
+    const isFeatureDataMAG = Object.keys(samples).includes("") && Object.keys(samples).length === 1;
+    
+    // For FeatureData[MAG], selectedSample should be "" and MAGs should be available
+    if (isFeatureDataMAG && selectedSample === "") {
+      magSelector.disabled = false;
+      const magIds = samples[""].slice().sort();
+      magIds.forEach(magId => {
+        const option = document.createElement('option');
+        option.value = magId;
+        option.textContent = magId;
+        magSelector.appendChild(option);
+      });
+      // Preselect first MAG if available
+      if (magIds.length > 0) {
+        magSelector.value = magIds[0];
+        // Automatically load the plot for the first MAG
+        loadPlot(selectedSample, magIds[0]);
+      }
+      return;
+    }
+    
+    // Handle "All Samples" selection for SampleData[MAGs] (empty value = all samples)
     if (selectedSample === "" || selectedSample === null || selectedSample === undefined) {
       magSelector.disabled = true;
       return;
     }
+    
     // Check if selectedSample exists as a key in samples (including empty string)
     const hasValidSample = samples.hasOwnProperty(selectedSample);
     magSelector.disabled = !hasValidSample;
@@ -299,7 +342,14 @@ document.addEventListener('DOMContentLoaded', function() {
   });
   // Function to load plot HTML
   function loadPlot(sampleId, magId) {
-    const plotUrl = `plots/${sampleId}/${magId}.viz.html`;
+    // Determine if this is FeatureData[MAG] (dereplicated MAGs)
+    const isFeatureDataMAG = Object.keys(samples).includes("") && Object.keys(samples).length === 1;
+    
+    // Construct plot URL based on input type
+    const plotUrl = isFeatureDataMAG && sampleId === "" 
+      ? `plots/${magId}.viz.html`  // FeatureData[MAG]: plots directly in plots/ folder
+      : `plots/${sampleId}/${magId}.viz.html`;  // SampleData[MAGs]: plots in sample subfolder
+      
     plotCard.style.display = 'block';
     loadingSpinner.style.display = 'block';
     plotContainer.innerHTML = '';
