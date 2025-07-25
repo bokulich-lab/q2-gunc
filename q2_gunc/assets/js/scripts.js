@@ -3,7 +3,7 @@ let samples = window.q2_gunc_samples || {};
 let summaryData = window.q2_gunc_summaryData || [];
 
 // Create GUNC Summary Visualization
-function createSummaryPlot(filteredData = null, reverseY = true) {
+function createSummaryPlot(filteredData = null, reverseY = true, isFeatureDataMAG = false) {
   let dataToUse = filteredData || summaryData;
   // Apply taxonomic level filter
   const levelSelector = document.getElementById('level-selector');
@@ -60,9 +60,6 @@ function createSummaryPlot(filteredData = null, reverseY = true) {
   const sampleCountSpan = document.querySelector('.stat-value.text-info');
   const passCountSpan = document.querySelector('.stat-value.text-accent');
   const failCountSpan = document.querySelector('.stat-value.text-error');
-  
-  // Determine if this is FeatureData[MAG] (dereplicated MAGs)
-  const isFeatureDataMAG = Object.keys(samples).includes("") && Object.keys(samples).length === 1;
   
   // For FeatureData[MAG], show "-" for sample count since samples are not meaningful
   const sampleCount = isFeatureDataMAG ? "-" : new Set(dataToUse.map(d => d.sample_id)).size;
@@ -214,8 +211,13 @@ document.addEventListener('DOMContentLoaded', function() {
   const plotContainer = document.getElementById('plot-container');
   const loadingSpinner = document.getElementById('loading-spinner');
   const reverseYAxisCheckbox = document.getElementById('reverse-y-axis');
+  
+  // Calculate this once and pass to functions that need it
+  const sampleKeys = Object.keys(samples).sort();
+  const isFeatureDataMAG = sampleKeys.includes("") && sampleKeys.length === 1;
+  
   // Create the summary plot
-  createSummaryPlot(null, reverseYAxisCheckbox ? reverseYAxisCheckbox.checked : true);
+  createSummaryPlot(null, reverseYAxisCheckbox ? reverseYAxisCheckbox.checked : true, isFeatureDataMAG);
   // Add event listener for GUNC pass filter checkbox
   const filterCheckbox = document.getElementById('filter-gunc-pass');
   if (filterCheckbox) {
@@ -235,17 +237,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const selectedSample = sampleSelector.value;
     const reverseY = reverseYAxisCheckbox ? reverseYAxisCheckbox.checked : true;
     if (selectedSample === "") {
-      createSummaryPlot(null, reverseY);
+      createSummaryPlot(null, reverseY, isFeatureDataMAG);
     } else {
       const filteredData = summaryData.filter(item => item.sample_id === selectedSample);
-      createSummaryPlot(filteredData, reverseY);
+      createSummaryPlot(filteredData, reverseY, isFeatureDataMAG);
     }
   }
-  // Determine if this is FeatureData[MAG] (dereplicated MAGs) or SampleData[MAGs] (per-sample MAGs)
-  const isFeatureDataMAG = sampleKeys.includes("") && sampleKeys.length === 1;
-  
   // Populate sample dropdown with "All Samples" option first
-  const sampleKeys = Object.keys(samples).sort();
   sampleKeys.forEach(sampleId => {
     const option = document.createElement('option');
     option.value = sampleId;
@@ -261,19 +259,16 @@ document.addEventListener('DOMContentLoaded', function() {
     sampleSelector.disabled = true;
     magSelector.disabled = false;
     // Populate MAGs immediately for FeatureData[MAG]
-    populateMAGs("");
+    populateMAGs("", isFeatureDataMAG);
   } else {
     sampleSelector.value = "";
     sampleSelector.disabled = false;
     magSelector.disabled = true;
   }
   // Function to populate MAG dropdown
-  function populateMAGs(selectedSample) {
+  function populateMAGs(selectedSample, isFeatureDataMAG) {
     magSelector.innerHTML = '<option value="">-- Select a MAG --</option>';
     plotCard.style.display = 'none';
-    
-    // Determine if this is FeatureData[MAG] (dereplicated MAGs)
-    const isFeatureDataMAG = Object.keys(samples).includes("") && Object.keys(samples).length === 1;
     
     // For FeatureData[MAG], selectedSample should be "" and MAGs should be available
     if (isFeatureDataMAG && selectedSample === "") {
@@ -289,7 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (magIds.length > 0) {
         magSelector.value = magIds[0];
         // Automatically load the plot for the first MAG
-        loadPlot(selectedSample, magIds[0]);
+        loadPlot(selectedSample, magIds[0], isFeatureDataMAG);
       }
       return;
     }
@@ -315,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (magIds.length > 0) {
         magSelector.value = magIds[0];
         // Automatically load the plot for the first MAG
-        loadPlot(selectedSample, magIds[0]);
+        loadPlot(selectedSample, magIds[0], isFeatureDataMAG);
       }
     }
   }
@@ -325,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Update plot with new sample selection
     updatePlot();
     // Update MAG dropdown
-    populateMAGs(selectedSample);
+    populateMAGs(selectedSample, isFeatureDataMAG);
   });
   // Handle MAG selection
   magSelector.addEventListener('change', function() {
@@ -335,16 +330,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasValidSample = selectedSample !== null && selectedSample !== undefined && samples.hasOwnProperty(selectedSample);
     const hasValidMag = selectedMag && selectedMag !== "";
     if (hasValidSample && hasValidMag) {
-      loadPlot(selectedSample, selectedMag);
+      loadPlot(selectedSample, selectedMag, isFeatureDataMAG);
     } else {
       plotCard.style.display = 'none';
     }
   });
   // Function to load plot HTML
-  function loadPlot(sampleId, magId) {
-    // Determine if this is FeatureData[MAG] (dereplicated MAGs)
-    const isFeatureDataMAG = Object.keys(samples).includes("") && Object.keys(samples).length === 1;
-    
+  function loadPlot(sampleId, magId, isFeatureDataMAG) {
     // Construct plot URL based on input type
     const plotUrl = isFeatureDataMAG && sampleId === "" 
       ? `plots/${magId}.viz.html`  // FeatureData[MAG]: plots directly in plots/ folder
