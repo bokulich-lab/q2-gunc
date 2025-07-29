@@ -5,6 +5,7 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import importlib
 
 from q2_types.feature_data import FeatureData
 from q2_types.feature_data_mag import MAG
@@ -29,7 +30,6 @@ from q2_gunc.types import (
     GUNCDatabaseDirFmt,
     GUNCGeneCountsFormat,
     GUNCHTMLPlotFormat,
-    gunc_results_directory_format_to_metadata,
 )
 
 citations = Citations.load("citations.bib", package="q2_gunc")
@@ -150,10 +150,4 @@ plugin.register_semantic_types(GUNCResults, GUNCDB)
 plugin.register_semantic_type_to_format(GUNCResults, GUNCResultsDirectoryFormat)
 plugin.register_semantic_type_to_format(ReferenceDB[GUNCDB], GUNCDatabaseDirFmt)
 
-# Register transformer
-from qiime2 import Metadata
-plugin.register_transformer(
-    gunc_results_directory_format_to_metadata,
-    inputs=(GUNCResultsDirectoryFormat,),
-    outputs=(Metadata,),
-)
+importlib.import_module("q2_gunc.types._transformer")

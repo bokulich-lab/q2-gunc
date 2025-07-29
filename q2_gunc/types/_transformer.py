@@ -6,64 +6,63 @@
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
 import glob
-import os
 
 import pandas as pd
 import qiime2
 
-from ._format import GUNCResultsDirectoryFormat
+from . import GUNCResultsDirectoryFormat
+from ..plugin_setup import plugin
 
 
-def gunc_results_directory_format_to_metadata(
-    fmt: GUNCResultsDirectoryFormat,
-) -> qiime2.Metadata:
+def _read_single_result(fp: str) -> pd.DataFrame:
+    """Read a single GUNC results file into a pandas DataFrame."""
+    df = pd.read_csv(fp, sep='\t', index_col=None)
+    df['index'] = [f"{x}_{i}" for i, x in enumerate(df['genome'])]
+    df.set_index('index', inplace=True, drop=True)
+    return df
+
+
+def _read_dataframes(
+        fmt: GUNCResultsDirectoryFormat,
+) -> pd.DataFrame:
     """Transform GUNCResultsDirectoryFormat to qiime2.Metadata.
-    
+
     Parameters
     ----------
     fmt : GUNCResultsDirectoryFormat
-        GUNC results directory format to transform.
-        
+        GUNC results directory format to read from.
+
     Returns
     -------
-    qiime2.Metadata
-        Metadata object with MAG IDs as index and optional sample_id column.
+    pd.DataFrame
+        pandas DataFrame with MAG IDs as index and optional sample_id column.
     """
-    file_dict = fmt.file_dict()
-    
-    # Collect all dataframes from maxCSS files
     dataframes = []
-    
-    for sample_id, directory in file_dict.items():
-        # Find the maxCSS file in this directory
-        pattern = os.path.join(directory, "GUNC.*.maxCSS_level.tsv")
-        maxcss_files = glob.glob(pattern)
-        
-        if not maxcss_files:
-            # Skip directories without maxCSS files
-            continue
-            
-        # Use the first (and should be only) maxCSS file
-        maxcss_file = maxcss_files[0]
-        
-        # Read the TSV file
-        df = pd.read_csv(maxcss_file, sep='\t')
-        
-        # If we have sample data (partitioned), add sample_id column
-        if sample_id:  # sample_id is not empty string
-            df['sample_id'] = sample_id
-            
-        dataframes.append(df)
-    
-    # Concatenate all dataframes
+
+    for sample_id, sample_fp in fmt.file_dict().items():
+        for mag_fp in glob.glob(f"{sample_fp}/gunc_output/*.all_levels.tsv"):
+            df = _read_single_result(mag_fp)
+            if sample_id:
+                df['sample_id'] = sample_id
+            dataframes.append(df)
+
     if not dataframes:
-        raise ValueError("No GUNC maxCSS results found in the directory format")
-        
-    combined_df = pd.concat(dataframes, ignore_index=True)
-    
-    # Set MAG ID as index with name "id"
-    combined_df.set_index('genome', inplace=True)
+        raise ValueError("No GUNC results found in the directory format")
+
+    combined_df = pd.concat(dataframes)
+    combined_df["pass.GUNC"] = combined_df["pass.GUNC"].astype(str)
     combined_df.index.name = 'id'
-    
-    # Create and return Metadata object
-    return qiime2.Metadata(combined_df)
+
+    return combined_df
+
+
+@plugin.register_transformer
+def _1(data: GUNCResultsDirectoryFormat) -> pd.DataFrame:
+    df = _read_dataframes(data)
+    return df
+
+
+@plugin.register_transformer
+def _2(data: GUNCResultsDirectoryFormat) -> qiime2.Metadata:
+    df = _read_dataframes(data)
+    return qiime2.Metadata(df)

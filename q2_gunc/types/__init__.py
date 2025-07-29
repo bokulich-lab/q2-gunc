@@ -13,7 +13,6 @@ from ._format import (
     GUNCGeneCountsFormat,
     GUNCHTMLPlotFormat,
 )
-from ._transformer import gunc_results_directory_format_to_metadata
 
 __all__ = [
     "GUNCResults",
@@ -23,5 +22,4 @@ __all__ = [
     "GUNCDatabaseDirFmt",
     "GUNCGeneCountsFormat",
     "GUNCHTMLPlotFormat",
-    "gunc_results_directory_format_to_metadata",
 ]
