@@ -5,6 +5,9 @@
 #
 # The full license is in the file LICENSE, distributed with this software.
 # ----------------------------------------------------------------------------
+import glob
+import os
+
 import pandas as pd
 import qiime2
 
@@ -33,9 +36,6 @@ def gunc_results_directory_format_to_metadata(
     
     for sample_id, directory in file_dict.items():
         # Find the maxCSS file in this directory
-        import glob
-        import os
-        
         pattern = os.path.join(directory, "GUNC.*.maxCSS_level.tsv")
         maxcss_files = glob.glob(pattern)
         
