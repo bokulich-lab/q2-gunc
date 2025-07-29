@@ -29,6 +29,7 @@ from q2_gunc.types import (
     GUNCDatabaseDirFmt,
     GUNCGeneCountsFormat,
     GUNCHTMLPlotFormat,
+    gunc_results_directory_format_to_metadata,
 )
 
 citations = Citations.load("citations.bib", package="q2_gunc")
@@ -148,3 +149,11 @@ plugin.register_formats(
 plugin.register_semantic_types(GUNCResults, GUNCDB)
 plugin.register_semantic_type_to_format(GUNCResults, GUNCResultsDirectoryFormat)
 plugin.register_semantic_type_to_format(ReferenceDB[GUNCDB], GUNCDatabaseDirFmt)
+
+# Register transformer
+from qiime2 import Metadata
+plugin.register_transformer(
+    gunc_results_directory_format_to_metadata,
+    inputs=(GUNCResultsDirectoryFormat,),
+    outputs=(Metadata,),
+)
