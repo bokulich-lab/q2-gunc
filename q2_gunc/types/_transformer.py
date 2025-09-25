@@ -16,14 +16,14 @@ from ..plugin_setup import plugin
 
 def _read_single_result(fp: str) -> pd.DataFrame:
     """Read a single GUNC results file into a pandas DataFrame."""
-    df = pd.read_csv(fp, sep='\t', index_col=None)
-    df['index'] = [f"{x}_{i}" for i, x in enumerate(df['genome'])]
-    df.set_index('index', inplace=True, drop=True)
+    df = pd.read_csv(fp, sep="\t", index_col=None)
+    df["index"] = [f"{x}_{i}" for i, x in enumerate(df["genome"])]
+    df.set_index("index", inplace=True, drop=True)
     return df
 
 
 def _read_dataframes(
-        fmt: GUNCResultsDirectoryFormat,
+    fmt: GUNCResultsDirectoryFormat,
 ) -> pd.DataFrame:
     """Transform GUNCResultsDirectoryFormat to qiime2.Metadata.
 
@@ -43,7 +43,7 @@ def _read_dataframes(
         for mag_fp in glob.glob(f"{sample_fp}/gunc_output/*.all_levels.tsv"):
             df = _read_single_result(mag_fp)
             if sample_id:
-                df['sample_id'] = sample_id
+                df["sample_id"] = sample_id
             dataframes.append(df)
 
     if not dataframes:
@@ -51,7 +51,7 @@ def _read_dataframes(
 
     combined_df = pd.concat(dataframes)
     combined_df["pass.GUNC"] = combined_df["pass.GUNC"].astype(str)
-    combined_df.index.name = 'id'
+    combined_df.index.name = "id"
 
     return combined_df
 
