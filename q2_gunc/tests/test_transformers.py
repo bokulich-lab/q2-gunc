@@ -22,6 +22,7 @@ class TestTransformers(TestPluginBase):
         super().setUp()
         self.data_no_samples = self.get_data_path("results")
         self.data_with_samples = self.get_data_path("results-per-sample")
+        self.data_empty = self.get_data_path("results-empty")
 
     def test_gunc_to_df(self):
         transformer = self.get_transformer(GUNCResultsDirectoryFormat, pd.DataFrame)
@@ -39,6 +40,11 @@ class TestTransformers(TestPluginBase):
         self.assertIn("sample_id", obs.columns)
         self.assertEqual(obs.shape, (28, 14))
         self.assertSetEqual(set(obs["sample_id"]), {"SRR9640343", "SRR9640344"})
+
+    def test_gunc_to_df_no_data(self):
+        transformer = self.get_transformer(GUNCResultsDirectoryFormat, pd.DataFrame)
+        with self.assertRaisesRegex(ValueError, "No GUNC results"):
+            transformer(GUNCResultsDirectoryFormat(self.data_empty, mode="r"))
 
     def test_gunc_to_metadata(self):
         transformer = self.get_transformer(GUNCResultsDirectoryFormat, qiime2.Metadata)
