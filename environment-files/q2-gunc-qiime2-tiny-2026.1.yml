@@ -13,4 +13,4 @@ dependencies:
   - gunc
   - pip
   - pip:
-     - "q2-gunc@git+https://github.com/bokulich-lab/q2-gunc.git"
+     - q2-gunc@git+https://github.com/bokulich-lab/q2-gunc.git@2026.1.0
